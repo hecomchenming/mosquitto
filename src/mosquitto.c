@@ -161,6 +161,31 @@ void handle_sigusr1(int signal)
 #endif
 }
 
+void mosquitto__daemonise(void)
+{
+	char err[256];
+	pid_t pid;
+
+	pid = fork();
+	if(pid < 0){
+		strerror_r(errno, err, 256);
+		_mosquitto_log_printf(NULL, MOSQ_LOG_ERR, "Error in fork: %s", err);
+		exit(1);
+	}
+	if(pid > 0){
+		exit(0);
+	}
+	if(setsid() < 0){
+		strerror_r(errno, err, 256);
+		_mosquitto_log_printf(NULL, MOSQ_LOG_ERR, "Error in setsid: %s", err);
+		exit(1);
+	}
+
+	assert(freopen("/dev/null", "r", stdin));
+	assert(freopen("/dev/null", "w", stdout));
+	assert(freopen("/dev/null", "w", stderr));
+}
+
 /* Signal handler for SIGUSR2 - vacuum the db. */
 void handle_sigusr2(int signal)
 {
@@ -206,6 +231,7 @@ int main(int argc, char *argv[])
 			default:
 				return MOSQ_ERR_SUCCESS;
 		}
+		mosquitto__daemonise();
 	}
 
 	if(config.daemon && config.pid_file){

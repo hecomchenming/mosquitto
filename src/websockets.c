@@ -591,6 +591,7 @@ struct libwebsocket_context *mosq_websockets_init(struct _mqtt3_listener *listen
 	user = _mosquitto_calloc(1, sizeof(struct libws_mqtt_hack));
 	if(!user){
 		_mosquitto_free(p);
+		_mosquitto_log_printf(NULL, MOSQ_LOG_ERR, "Out of memory.");
 		return NULL;
 	}
 
@@ -599,6 +600,7 @@ struct libwebsocket_context *mosq_websockets_init(struct _mqtt3_listener *listen
 		if(!user->http_dir){
 			_mosquitto_free(user);
 			_mosquitto_free(p);
+			_mosquitto_log_printf(NULL, MOSQ_LOG_ERR, "Error: Unable to open http dir \"%s\".", user->http_dir);
 			return NULL;
 		}
 	}
