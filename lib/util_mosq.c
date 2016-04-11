@@ -17,10 +17,6 @@ Contributors:
 #include <assert.h>
 #include <string.h>
 
-#ifdef WIN32
-#include <winsock2.h>
-#endif
-
 
 #include <mosquitto.h>
 #include <memory_mosq.h>
@@ -317,17 +313,6 @@ int _mosquitto_hex2bin(const char *hex, unsigned char *bin, int bin_max_len)
 
 FILE *_mosquitto_fopen(const char *path, const char *mode)
 {
-#ifdef WIN32
-	char buf[4096];
-	int rc;
-	rc = ExpandEnvironmentStrings(path, buf, 4096);
-	if(rc == 0 || rc > 4096){
-		return NULL;
-	}else{
-		return fopen(buf, mode);
-	}
-#else
 	return fopen(path, mode);
-#endif
 }
 

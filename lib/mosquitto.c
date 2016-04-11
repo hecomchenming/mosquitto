@@ -19,15 +19,9 @@ Contributors:
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
-#ifndef WIN32
 #include <sys/select.h>
 #include <sys/time.h>
 #include <unistd.h>
-#else
-#include <winsock2.h>
-#include <windows.h>
-typedef int ssize_t;
-#endif
 
 #include <mosquitto.h>
 #include <mosquitto_internal.h>
@@ -46,14 +40,13 @@ typedef int ssize_t;
 
 #include "config.h"
 
-#if !defined(WIN32) && !defined(__SYMBIAN32__)
 #define HAVE_PSELECT
-#endif
 
 void _mosquitto_destroy(struct mosquitto *mosq);
 static int _mosquitto_reconnect(struct mosquitto *mosq, bool blocking);
 static int _mosquitto_connect_init(struct mosquitto *mosq, const char *host, int port, int keepalive, const char *bind_address);
 
+#ifndef WITH_BROKER
 int mosquitto_lib_version(int *major, int *minor, int *revision)
 {
 	if(major) *major = LIBMOSQUITTO_MAJOR;
@@ -64,14 +57,10 @@ int mosquitto_lib_version(int *major, int *minor, int *revision)
 
 int mosquitto_lib_init(void)
 {
-#ifdef WIN32
-	srand(GetTickCount());
-#else
 	struct timeval tv;
 
 	gettimeofday(&tv, NULL);
 	srand(tv.tv_sec*1000 + tv.tv_usec/1000);
-#endif
 
 	_mosquitto_net_init();
 
@@ -95,9 +84,7 @@ struct mosquitto *mosquitto_new(const char *id, bool clean_session, void *userda
 		return NULL;
 	}
 
-#ifndef WIN32
 	signal(SIGPIPE, SIG_IGN);
-#endif
 
 	mosq = (struct mosquitto *)_mosquitto_calloc(1, sizeof(struct mosquitto));
 	if(mosq){
@@ -842,12 +829,13 @@ int mosquitto_loop(struct mosquitto *mosq, int timeout, int max_packets)
 	char pairbuf;
 	int maxfd = 0;
 
-	if(!mosq || max_packets < 1) return MOSQ_ERR_INVAL;
-#ifndef WIN32
+    if(!mosq || max_packets < 1) {
+        return MOSQ_ERR_INVAL;
+    }
+    
 	if(mosq->sock >= FD_SETSIZE || mosq->sockpairR >= FD_SETSIZE){
 		return MOSQ_ERR_INVAL;
 	}
-#endif
 
 	FD_ZERO(&readfds);
 	FD_ZERO(&writefds);
@@ -925,9 +913,6 @@ int mosquitto_loop(struct mosquitto *mosq, int timeout, int max_packets)
 	fdcount = select(maxfd+1, &readfds, &writefds, NULL, &local_timeout);
 #endif
 	if(fdcount == -1){
-#ifdef WIN32
-		errno = WSAGetLastError();
-#endif
 		if(errno == EINTR){
 			return MOSQ_ERR_SUCCESS;
 		}else{
@@ -952,12 +937,8 @@ int mosquitto_loop(struct mosquitto *mosq, int timeout, int max_packets)
 				}
 			}
 			if(mosq->sockpairR != INVALID_SOCKET && FD_ISSET(mosq->sockpairR, &readfds)){
-#ifndef WIN32
 				if(read(mosq->sockpairR, &pairbuf, 1) == 0){
 				}
-#else
-				recv(mosq->sockpairR, &pairbuf, 1, 0);
-#endif
 				/* Fake write possible, to stimulate output write even though
 				 * we didn't ask for it, because at that point the publish or
 				 * other command wasn't present. */
@@ -1049,11 +1030,7 @@ int mosquitto_loop_forever(struct mosquitto *mosq, int timeout, int max_packets)
 					reconnects++;
 				}
 
-#ifdef WIN32
-				Sleep(reconnect_delay*1000);
-#else
 				sleep(reconnect_delay);
-#endif
 
 				pthread_mutex_lock(&mosq->state_mutex);
 				if(mosq->state == mosq_cs_disconnecting){
@@ -1418,4 +1395,5 @@ int mosquitto_sub_topic_tokens_free(char ***topics, int count)
 
 	return MOSQ_ERR_SUCCESS;
 }
+#endif
 

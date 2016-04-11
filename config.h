@@ -11,14 +11,6 @@
  *
  * Generally for Windows native support.
  * ============================================================ */
-#ifdef WIN32
-#define snprintf sprintf_s
-#  ifndef strcasecmp
-#    define strcasecmp strcmpi
-#  endif
-#define strtok_r strtok_s
-#define strerror_r(e, b, l) strerror_s(b, l, e)
-#endif
 
 
 #define uthash_malloc(sz) _mosquitto_malloc(sz)
@@ -27,3 +19,21 @@
 #ifndef EPROTO
 #  define EPROTO ECONNABORTED
 #endif
+
+#ifndef VERSION
+# define VERSION "1.4.8"
+#endif
+
+#ifndef TIMESTAMP
+# define TIMESTAMP "20160408"
+#endif
+
+
+//#ifndef WITH_BROKER
+//#  define WITH_BROKER
+//#endif
+
+//#ifndef WITH_TLS
+//# define WITH_TLS
+//#endif
+

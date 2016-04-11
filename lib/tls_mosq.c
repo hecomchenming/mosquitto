@@ -16,13 +16,9 @@ Contributors:
 
 #ifdef WITH_TLS
 
-#ifdef WIN32
-#  include <winsock2.h>
-#  include <ws2tcpip.h>
-#else
-#  include <arpa/inet.h>
-#  include <sys/socket.h>
-#endif
+
+#include <arpa/inet.h>
+#include <sys/socket.h>
 
 #include <string.h>
 #include <openssl/conf.h>
@@ -114,13 +110,8 @@ int _mosquitto_verify_certificate_hostname(X509 *cert, const char *hostname)
 	int ipv6_ok;
 	int ipv4_ok;
 
-#ifdef WIN32
-	ipv6_ok = InetPton(AF_INET6, hostname, &ipv6_addr);
-	ipv4_ok = InetPton(AF_INET, hostname, &ipv4_addr);
-#else
 	ipv6_ok = inet_pton(AF_INET6, hostname, &ipv6_addr);
 	ipv4_ok = inet_pton(AF_INET, hostname, &ipv4_addr);
-#endif
 
 	san = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
 	if(san){

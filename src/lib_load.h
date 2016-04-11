@@ -17,21 +17,13 @@ Contributors:
 #ifndef LIB_LOAD_H
 #define LIB_LOAD_H
 
-#ifdef WIN32
-#	include <windows.h>
-#else
-#	include <dlfcn.h>
-#endif
+#include <dlfcn.h>
 
-#ifdef WIN32
-#	define LIB_LOAD(A) LoadLibrary(A)
-#	define LIB_CLOSE(A) FreeLibrary(A)
-#	define LIB_SYM(HANDLE, SYM) GetProcAddress(HANDLE, SYM)
-#else
-#	define LIB_LOAD(A) dlopen(A, RTLD_NOW|RTLD_GLOBAL)
-#	define LIB_CLOSE(A) dlclose(A)
-#	define LIB_SYM(HANDLE, SYM) dlsym(HANDLE, SYM)
-#endif
+
+#define LIB_LOAD(A) dlopen(A, RTLD_NOW|RTLD_GLOBAL)
+#define LIB_CLOSE(A) dlclose(A)
+#define LIB_SYM(HANDLE, SYM) dlsym(HANDLE, SYM)
+
 
 #define LIB_SYM_EASY(MEMBER, HANDLE, SYM) if(!(MEMBER = LIB_SYM(HANDLE, SYM)) return 1
 #endif

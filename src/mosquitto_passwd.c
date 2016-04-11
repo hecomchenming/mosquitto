@@ -23,20 +23,9 @@ Contributors:
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef WIN32
-#  include <process.h>
-#	ifndef __cplusplus
-#		define bool char
-#		define true 1
-#		define false 0
-#	endif
-#   define snprintf sprintf_s
-#	include <io.h>
-#else
-#  include <stdbool.h>
-#  include <unistd.h>
-#  include <termios.h>
-#endif
+#include <stdbool.h>
+#include <unistd.h>
+#include <termios.h>
 
 #define MAX_BUFFER_LEN 1024
 #define SALT_LEN 12
@@ -209,31 +198,6 @@ int update_pwuser(FILE *fptr, FILE *ftmp, const char *username, const char *pass
 
 int gets_quiet(char *s, int len)
 {
-#ifdef WIN32
-	HANDLE h;
-	DWORD con_orig, con_quiet;
-	DWORD read_len = 0;
-
-	memset(s, 0, len);
-	h  = GetStdHandle(STD_INPUT_HANDLE);
-	GetConsoleMode(h, &con_orig);
-	con_quiet &= ~ENABLE_ECHO_INPUT;
-	con_quiet |= ENABLE_LINE_INPUT;
-	SetConsoleMode(h, con_quiet);
-	if(!ReadConsole(h, s, len, &read_len, NULL)){
-		SetConsoleMode(h, con_orig);
-		return 1;
-	}
-	while(s[strlen(s)-1] == 10 || s[strlen(s)-1] == 13){
-		s[strlen(s)-1] = 0;
-	}
-	if(strlen(s) == 0){
-		return 1;
-	}
-	SetConsoleMode(h, con_orig);
-
-	return 0;
-#else
 	struct termios ts_quiet, ts_orig;
 	char *rs;
 
@@ -257,7 +221,6 @@ int gets_quiet(char *s, int len)
 		}
 	}
 	return 0;
-#endif
 }
 
 int get_password(char *password, int len)
@@ -294,12 +257,10 @@ int copy_contents(FILE *src, FILE *dest)
 
 	rewind(src);
 	rewind(dest);
-	
-#ifdef WIN32
-	_chsize(fileno(dest), 0);
-#else
-	if(ftruncate(fileno(dest), 0)) return 1;
-#endif
+
+    if(ftruncate(fileno(dest), 0)) {
+        return 1;
+    }
 
 	while(!feof(src)){
 		len = fread(buf, 1, MAX_BUFFER_LEN, src);
@@ -332,19 +293,17 @@ int create_backup(const char *backup_file, FILE *fptr)
 	rewind(fptr);
 	return 0;
 }
-void handle_sigint(int signal)
+void handle_sigint1(int signal)
 {
-#ifndef WIN32
 	struct termios ts;
 
 	tcgetattr(0, &ts);
 	ts.c_lflag |= ECHO | ICANON;
 	tcsetattr(0, TCSANOW, &ts);
-#endif
 	exit(0);
 }
 
-int main(int argc, char *argv[])
+int main2(int argc, char *argv[])
 {
 	char *password_file_tmp = NULL;
 	char password_file[1024];
@@ -359,8 +318,8 @@ int main(int argc, char *argv[])
 	bool do_update_file = false;
 	char *backup_file;
 
-	signal(SIGINT, handle_sigint);
-	signal(SIGTERM, handle_sigint);
+	signal(SIGINT, handle_sigint1);
+	signal(SIGTERM, handle_sigint1);
 
 	OpenSSL_add_all_digests();
 

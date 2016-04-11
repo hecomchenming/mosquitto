@@ -29,6 +29,7 @@ Contributors:
 #include <time_mosq.h>
 #include <util_mosq.h>
 
+#ifndef WITH_BROKER
 int _mosquitto_packet_handle(struct mosquitto *mosq)
 {
 	assert(mosq);
@@ -152,4 +153,5 @@ int _mosquitto_handle_publish(struct mosquitto *mosq)
 			return MOSQ_ERR_PROTOCOL;
 	}
 }
+#endif
 

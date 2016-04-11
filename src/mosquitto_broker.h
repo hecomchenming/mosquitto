@@ -488,14 +488,6 @@ int mosquitto_acl_check_default(struct mosquitto_db *db, struct mosquitto *conte
 int mosquitto_unpwd_check_default(struct mosquitto_db *db, const char *username, const char *password);
 int mosquitto_psk_key_get_default(struct mosquitto_db *db, const char *hint, const char *identity, char *key, int max_key_len);
 
-/* ============================================================
- * Window service related functions
- * ============================================================ */
-#if defined(WIN32) || defined(__CYGWIN__)
-void service_install(void);
-void service_uninstall(void);
-void service_run(void);
-#endif
 
 /* ============================================================
  * Websockets related functions

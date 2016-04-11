@@ -22,6 +22,7 @@ Contributors:
 #include <net_mosq.h>
 #include <read_handle.h>
 
+#ifndef WITH_BROKER
 int _mosquitto_handle_connack(struct mosquitto *mosq)
 {
 	uint8_t byte;
@@ -57,4 +58,6 @@ int _mosquitto_handle_connack(struct mosquitto *mosq)
 			return MOSQ_ERR_PROTOCOL;
 	}
 }
+#endif
+
 

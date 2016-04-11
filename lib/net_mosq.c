@@ -19,14 +19,9 @@ Contributors:
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
-#ifndef WIN32
 #include <netdb.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#else
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#endif
 
 #ifdef __ANDROID__
 #include <linux/in.h>
@@ -89,11 +84,6 @@ int tls_ex_index_mosq = -1;
 
 void _mosquitto_net_init(void)
 {
-#ifdef WIN32
-	WSADATA wsaData;
-	WSAStartup(MAKEWORD(2,2), &wsaData);
-#endif
-
 #ifdef WITH_SRV
 	ares_library_init(ARES_LIB_INIT_ALL);
 #endif
@@ -121,10 +111,6 @@ void _mosquitto_net_cleanup(void)
 
 #ifdef WITH_SRV
 	ares_library_cleanup();
-#endif
-
-#ifdef WIN32
-	WSACleanup();
 #endif
 }
 
@@ -179,12 +165,8 @@ int _mosquitto_packet_queue(struct mosquitto *mosq, struct _mosquitto_packet *pa
 	/* Write a single byte to sockpairW (connected to sockpairR) to break out
 	 * of select() if in threaded mode. */
 	if(mosq->sockpairW != INVALID_SOCKET){
-#ifndef WIN32
 		if(write(mosq->sockpairW, &sockpair_data, 1)){
 		}
-#else
-		send(mosq->sockpairW, &sockpair_data, 1, 0);
-#endif
 	}
 
 	if(mosq->in_callback == false && mosq->threaded == false){
@@ -275,9 +257,6 @@ int _mosquitto_try_connect(struct mosquitto *mosq, const char *host, uint16_t po
 	struct addrinfo *ainfo_bind, *rp_bind;
 	int s;
 	int rc = MOSQ_ERR_SUCCESS;
-#ifdef WIN32
-	uint32_t val = 1;
-#endif
 
 	*sock = INVALID_SOCKET;
 	memset(&hints, 0, sizeof(struct addrinfo));
@@ -341,9 +320,7 @@ int _mosquitto_try_connect(struct mosquitto *mosq, const char *host, uint16_t po
 		}
 
 		rc = connect(*sock, rp->ai_addr, rp->ai_addrlen);
-#ifdef WIN32
-		errno = WSAGetLastError();
-#endif
+
 		if(rc == 0 || errno == EINPROGRESS || errno == COMPAT_EWOULDBLOCK){
 			if(rc < 0 && (errno == EINPROGRESS || errno == COMPAT_EWOULDBLOCK)){
 				rc = MOSQ_ERR_CONN_PENDING;
@@ -688,11 +665,7 @@ ssize_t _mosquitto_net_read(struct mosquitto *mosq, void *buf, size_t count)
 
 #endif
 
-#ifndef WIN32
 	return read(mosq->sock, buf, count);
-#else
-	return recv(mosq->sock, buf, count, 0);
-#endif
 
 #ifdef WITH_TLS
 	}
@@ -736,11 +709,7 @@ ssize_t _mosquitto_net_write(struct mosquitto *mosq, void *buf, size_t count)
 		/* Call normal write/send */
 #endif
 
-#ifndef WIN32
 	return write(mosq->sock, buf, count);
-#else
-	return send(mosq->sock, buf, count, 0);
-#endif
 
 #ifdef WITH_TLS
 	}
@@ -783,9 +752,6 @@ int _mosquitto_packet_write(struct mosquitto *mosq)
 				packet->to_process -= write_length;
 				packet->pos += write_length;
 			}else{
-#ifdef WIN32
-				errno = WSAGetLastError();
-#endif
 				if(errno == EAGAIN || errno == COMPAT_EWOULDBLOCK){
 					pthread_mutex_unlock(&mosq->current_out_packet_mutex);
 					return MOSQ_ERR_SUCCESS;
@@ -921,9 +887,7 @@ int _mosquitto_packet_read(struct mosquitto *mosq)
 #endif
 		}else{
 			if(read_length == 0) return MOSQ_ERR_CONN_LOST; /* EOF */
-#ifdef WIN32
-			errno = WSAGetLastError();
-#endif
+            
 			if(errno == EAGAIN || errno == COMPAT_EWOULDBLOCK){
 				return MOSQ_ERR_SUCCESS;
 			}else{
@@ -962,9 +926,7 @@ int _mosquitto_packet_read(struct mosquitto *mosq)
 				mosq->in_packet.remaining_mult *= 128;
 			}else{
 				if(read_length == 0) return MOSQ_ERR_CONN_LOST; /* EOF */
-#ifdef WIN32
-				errno = WSAGetLastError();
-#endif
+
 				if(errno == EAGAIN || errno == COMPAT_EWOULDBLOCK){
 					return MOSQ_ERR_SUCCESS;
 				}else{
@@ -996,9 +958,6 @@ int _mosquitto_packet_read(struct mosquitto *mosq)
 			mosq->in_packet.to_process -= read_length;
 			mosq->in_packet.pos += read_length;
 		}else{
-#ifdef WIN32
-			errno = WSAGetLastError();
-#endif
 			if(errno == EAGAIN || errno == COMPAT_EWOULDBLOCK){
 				if(mosq->in_packet.to_process > 1000){
 					/* Update last_msg_in time if more than 1000 bytes left to
@@ -1047,7 +1006,6 @@ int _mosquitto_packet_read(struct mosquitto *mosq)
 
 int _mosquitto_socket_nonblock(mosq_sock_t sock)
 {
-#ifndef WIN32
 	int opt;
 	/* Set non-blocking */
 	opt = fcntl(sock, F_GETFL, 0);
@@ -1060,13 +1018,6 @@ int _mosquitto_socket_nonblock(mosq_sock_t sock)
 		COMPAT_CLOSE(sock);
 		return 1;
 	}
-#else
-	unsigned long opt = 1;
-	if(ioctlsocket(sock, FIONBIO, &opt)){
-		COMPAT_CLOSE(sock);
-		return 1;
-	}
-#endif
 	return 0;
 }
 
@@ -1074,113 +1025,6 @@ int _mosquitto_socket_nonblock(mosq_sock_t sock)
 #ifndef WITH_BROKER
 int _mosquitto_socketpair(mosq_sock_t *pairR, mosq_sock_t *pairW)
 {
-#ifdef WIN32
-	int family[2] = {AF_INET, AF_INET6};
-	int i;
-	struct sockaddr_storage ss;
-	struct sockaddr_in *sa = (struct sockaddr_in *)&ss;
-	struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)&ss;
-	socklen_t ss_len;
-	mosq_sock_t spR, spW;
-
-	mosq_sock_t listensock;
-
-	*pairR = INVALID_SOCKET;
-	*pairW = INVALID_SOCKET;
-
-	for(i=0; i<2; i++){
-		memset(&ss, 0, sizeof(ss));
-		if(family[i] == AF_INET){
-			sa->sin_family = family[i];
-			sa->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-			sa->sin_port = 0;
-			ss_len = sizeof(struct sockaddr_in);
-		}else if(family[i] == AF_INET6){
-			sa6->sin6_family = family[i];
-			sa6->sin6_addr = in6addr_loopback;
-			sa6->sin6_port = 0;
-			ss_len = sizeof(struct sockaddr_in6);
-		}else{
-			return MOSQ_ERR_INVAL;
-		}
-
-		listensock = socket(family[i], SOCK_STREAM, IPPROTO_TCP);
-		if(listensock == -1){
-			continue;
-		}
-
-		if(bind(listensock, (struct sockaddr *)&ss, ss_len) == -1){
-			COMPAT_CLOSE(listensock);
-			continue;
-		}
-
-		if(listen(listensock, 1) == -1){
-			COMPAT_CLOSE(listensock);
-			continue;
-		}
-		memset(&ss, 0, sizeof(ss));
-		ss_len = sizeof(ss);
-		if(getsockname(listensock, (struct sockaddr *)&ss, &ss_len) < 0){
-			COMPAT_CLOSE(listensock);
-			continue;
-		}
-
-		if(family[i] == AF_INET){
-			sa->sin_family = family[i];
-			sa->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-			ss_len = sizeof(struct sockaddr_in);
-		}else if(family[i] == AF_INET6){
-			sa6->sin6_family = family[i];
-			sa6->sin6_addr = in6addr_loopback;
-			ss_len = sizeof(struct sockaddr_in6);
-		}
-
-		spR = socket(family[i], SOCK_STREAM, IPPROTO_TCP);
-		if(spR == -1){
-			COMPAT_CLOSE(listensock);
-			continue;
-		}
-		if(_mosquitto_socket_nonblock(spR)){
-			COMPAT_CLOSE(spR);
-			COMPAT_CLOSE(listensock);
-			continue;
-		}
-		if(connect(spR, (struct sockaddr *)&ss, ss_len) < 0){
-#ifdef WIN32
-			errno = WSAGetLastError();
-#endif
-			if(errno != EINPROGRESS && errno != COMPAT_EWOULDBLOCK){
-				COMPAT_CLOSE(spR);
-				COMPAT_CLOSE(listensock);
-				continue;
-			}
-		}
-		spW = accept(listensock, NULL, 0);
-		if(spW == -1){
-#ifdef WIN32
-			errno = WSAGetLastError();
-#endif
-			if(errno != EINPROGRESS && errno != COMPAT_EWOULDBLOCK){
-				COMPAT_CLOSE(spR);
-				COMPAT_CLOSE(listensock);
-				continue;
-			}
-		}
-
-		if(_mosquitto_socket_nonblock(spW)){
-			COMPAT_CLOSE(spR);
-			COMPAT_CLOSE(spW);
-			COMPAT_CLOSE(listensock);
-			continue;
-		}
-		COMPAT_CLOSE(listensock);
-
-		*pairR = spR;
-		*pairW = spW;
-		return MOSQ_ERR_SUCCESS;
-	}
-	return MOSQ_ERR_UNKNOWN;
-#else
 	int sv[2];
 
 	if(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == -1){
@@ -1199,6 +1043,5 @@ int _mosquitto_socketpair(mosq_sock_t *pairR, mosq_sock_t *pairW)
 	*pairR = sv[0];
 	*pairW = sv[1];
 	return MOSQ_ERR_SUCCESS;
-#endif
 }
 #endif

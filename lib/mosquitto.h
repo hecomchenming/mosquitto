@@ -21,26 +21,10 @@ Contributors:
 extern "C" {
 #endif
 
-#if defined(WIN32) && !defined(WITH_BROKER)
-#	ifdef libmosquitto_EXPORTS
-#		define libmosq_EXPORT  __declspec(dllexport)
-#	else
-#		define libmosq_EXPORT  __declspec(dllimport)
-#	endif
-#else
-#	define libmosq_EXPORT
-#endif
+#define libmosq_EXPORT
 
-#ifdef WIN32
-#	ifndef __cplusplus
-#		define bool char
-#		define true 1
-#		define false 0
-#	endif
-#else
-#	ifndef __cplusplus
-#		include <stdbool.h>
-#	endif
+#ifndef __cplusplus
+#	include <stdbool.h>
 #endif
 
 #define LIBMOSQUITTO_MAJOR 1

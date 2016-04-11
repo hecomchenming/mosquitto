@@ -438,14 +438,6 @@ static int callback_http(struct libwebsocket_context *context,
 
 
 			/* Get canonical path and check it is within our http_dir */
-#ifdef WIN32
-			filename_canonical = _fullpath(NULL, filename, 0);
-			if(!filename_canonical){
-				_mosquitto_free(filename);
-				libwebsockets_return_http_status(context, wsi, HTTP_STATUS_INTERNAL_SERVER_ERROR, NULL);
-				return -1;
-			}
-#else
 			filename_canonical = realpath(filename, NULL);
 			if(!filename_canonical){
 				_mosquitto_free(filename);
@@ -460,7 +452,6 @@ static int callback_http(struct libwebsocket_context *context,
 				}
 				return -1;
 			}
-#endif
 			if(strncmp(http_dir, filename_canonical, strlen(http_dir))){
 				/* Requested file isn't within http_dir, deny access. */
 				free(filename_canonical);
@@ -482,11 +473,7 @@ static int callback_http(struct libwebsocket_context *context,
 				fclose(u->fptr);
 				return -1;
 			}
-#ifdef WIN32
-			if((filestat.st_mode & S_IFREG) != S_IFREG){
-#else
 			if(!S_ISREG(filestat.st_mode)){
-#endif
 				libwebsockets_return_http_status(context, wsi, HTTP_STATUS_FORBIDDEN, NULL);
 				return -1;
 			}
@@ -608,11 +595,7 @@ struct libwebsocket_context *mosq_websockets_init(struct _mqtt3_listener *listen
 	}
 
 	if(listener->http_dir){
-#ifdef WIN32
-		user->http_dir = _fullpath(NULL, listener->http_dir, 0);
-#else
 		user->http_dir = realpath(listener->http_dir, NULL);
-#endif
 		if(!user->http_dir){
 			_mosquitto_free(user);
 			_mosquitto_free(p);

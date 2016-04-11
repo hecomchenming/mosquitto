@@ -22,6 +22,7 @@ Contributors:
 #include "net_mosq.h"
 #include "send_mosq.h"
 
+#ifndef WITH_BROKER
 #define SOCKS_AUTH_NONE 0x00
 #define SOCKS_AUTH_GSS 0x01
 #define SOCKS_AUTH_USERPASS 0x02
@@ -211,9 +212,6 @@ int mosquitto__socks5_read(struct mosquitto *mosq)
 				mosq->in_packet.pos += len;
 				mosq->in_packet.to_process -= len;
 			}else{
-#ifdef WIN32
-				errno = WSAGetLastError();
-#endif
 				if(errno == EAGAIN || errno == COMPAT_EWOULDBLOCK){
 					return MOSQ_ERR_SUCCESS;
 				}else{
@@ -253,9 +251,6 @@ int mosquitto__socks5_read(struct mosquitto *mosq)
 				mosq->in_packet.pos += len;
 				mosq->in_packet.to_process -= len;
 			}else{
-#ifdef WIN32
-				errno = WSAGetLastError();
-#endif
 				if(errno == EAGAIN || errno == COMPAT_EWOULDBLOCK){
 					return MOSQ_ERR_SUCCESS;
 				}else{
@@ -309,9 +304,6 @@ int mosquitto__socks5_read(struct mosquitto *mosq)
 				mosq->in_packet.pos += len;
 				mosq->in_packet.to_process -= len;
 			}else{
-#ifdef WIN32
-				errno = WSAGetLastError();
-#endif
 				if(errno == EAGAIN || errno == COMPAT_EWOULDBLOCK){
 					return MOSQ_ERR_SUCCESS;
 				}else{
@@ -393,4 +385,5 @@ int mosquitto__socks5_read(struct mosquitto *mosq)
 	}
 	return MOSQ_ERR_SUCCESS;
 }
+#endif
 #endif

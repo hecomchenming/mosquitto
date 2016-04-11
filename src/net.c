@@ -16,15 +16,10 @@ Contributors:
 
 #include <config.h>
 
-#ifndef WIN32
 #include <netdb.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
-#else
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#endif
 
 #include <assert.h>
 #include <errno.h>
@@ -325,11 +320,7 @@ int mqtt3_socket_listen(struct _mqtt3_listener *listener)
 	struct addrinfo hints;
 	struct addrinfo *ainfo, *rp;
 	char service[10];
-#ifndef WIN32
 	int ss_opt = 1;
-#else
-	char ss_opt = 1;
-#endif
 #ifdef WITH_TLS
 	int rc;
 	X509_STORE *store;
@@ -373,10 +364,9 @@ int mqtt3_socket_listen(struct _mqtt3_listener *listener)
 		}
 		listener->socks[listener->sock_count-1] = sock;
 
-#ifndef WIN32
 		ss_opt = 1;
 		setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &ss_opt, sizeof(ss_opt));
-#endif
+
 		ss_opt = 1;
 		setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, &ss_opt, sizeof(ss_opt));
 
@@ -385,9 +375,6 @@ int mqtt3_socket_listen(struct _mqtt3_listener *listener)
 		}
 
 		if(bind(sock, rp->ai_addr, rp->ai_addrlen) == -1){
-#ifdef WIN32
-			errno = WSAGetLastError();
-#endif
 			strerror_r(errno, buf, 256);
 			_mosquitto_log_printf(NULL, MOSQ_LOG_ERR, "Error: %s", buf);
 			COMPAT_CLOSE(sock);
@@ -395,9 +382,6 @@ int mqtt3_socket_listen(struct _mqtt3_listener *listener)
 		}
 
 		if(listen(sock, 100) == -1){
-#ifdef WIN32
-			errno = WSAGetLastError();
-#endif
 			strerror_r(errno, buf, 256);
 			_mosquitto_log_printf(NULL, MOSQ_LOG_ERR, "Error: %s", buf);
 			COMPAT_CLOSE(sock);

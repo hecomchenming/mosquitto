@@ -295,7 +295,7 @@ error:
 	return 1;
 }
 
-int main(int argc, char *argv[])
+int main1(int argc, char *argv[])
 {
 	FILE *fd;
 	char header[15];

@@ -22,22 +22,12 @@ Contributors:
 #include <string.h>
 #include <errno.h>
 
-#ifdef WIN32
-#else
-#  include <dirent.h>
-#endif
+#include <dirent.h>
 
-#ifndef WIN32
-#  include <netdb.h>
-#  include <sys/socket.h>
-#else
-#  include <winsock2.h>
-#  include <ws2tcpip.h>
-#endif
+#include <netdb.h>
+#include <sys/socket.h>
 
-#if !defined(WIN32) && !defined(__CYGWIN__)
 #  include <sys/syslog.h>
-#endif
 
 #include <mosquitto_broker.h>
 #include <memory_mosq.h>
@@ -54,10 +44,6 @@ struct config_recurse {
 	int max_queued_messages;
 };
 
-#if defined(WIN32) || defined(__CYGWIN__)
-#include <windows.h>
-extern SERVICE_STATUS_HANDLE service_handle;
-#endif
 
 static int _conf_parse_bool(char **token, const char *name, bool *value, char *saveptr);
 static int _conf_parse_int(char **token, const char *name, int *value, char *saveptr);
@@ -80,7 +66,6 @@ static int _conf_attempt_resolve(const char *host, const char *text, int log, co
 		freeaddrinfo(gai_res);
 	}
 	if(rc != 0){
-#ifndef WIN32
 		if(rc == EAI_SYSTEM){
 			if(errno == ENOENT){
 				_mosquitto_log_printf(NULL, log, "%s: Unable to resolve %s %s.", msg, text, host);
@@ -90,11 +75,6 @@ static int _conf_attempt_resolve(const char *host, const char *text, int log, co
 		}else{
 			_mosquitto_log_printf(NULL, log, "%s: Error resolving %s: %s.", msg, text, gai_strerror(rc));
 		}
-#else
-		if(rc == WSAHOST_NOT_FOUND){
-			_mosquitto_log_printf(NULL, log, "%s: Error resolving %s.", msg, text);
-		}
-#endif
 		return MOSQ_ERR_INVAL;
 	}
 	return MOSQ_ERR_SUCCESS;
@@ -124,16 +104,6 @@ static void _config_init_reload(struct mqtt3_config *config)
 		_mosquitto_free(config->log_file);
 		config->log_file = NULL;
 	}
-#if defined(WIN32) || defined(__CYGWIN__)
-	if(service_handle){
-		/* This is running as a Windows service. Default to no logging. Using
-		 * stdout/stderr is forbidden because the first clients to connect will
-		 * get log information sent to them for some reason. */
-		config->log_dest = MQTT3_LOG_NONE;
-	}else{
-		config->log_dest = MQTT3_LOG_STDERR;
-	}
-#else
 	config->log_facility = LOG_DAEMON;
 	config->log_dest = MQTT3_LOG_STDERR;
 	if(config->verbose){
@@ -141,7 +111,6 @@ static void _config_init_reload(struct mqtt3_config *config)
 	}else{
 		config->log_type = MOSQ_LOG_ERR | MOSQ_LOG_WARNING | MOSQ_LOG_NOTICE | MOSQ_LOG_INFO;
 	}
-#endif
 	config->log_timestamp = true;
 	if(config->password_file) _mosquitto_free(config->password_file);
 	config->password_file = NULL;
@@ -549,14 +518,8 @@ int _config_read_file_core(struct mqtt3_config *config, bool reload, const char 
 	time_t expiration_mult;
 	char *key;
 	char *conf_file;
-#ifdef WIN32
-	HANDLE fh;
-	char dirpath[MAX_PATH];
-	WIN32_FIND_DATA find_data;
-#else
 	DIR *dh;
 	struct dirent *de;
-#endif
 	int len;
 	struct _mqtt3_listener *cur_listener = &config->default_listener;
 #ifdef WITH_BRIDGE
@@ -1094,36 +1057,6 @@ int _config_read_file_core(struct mqtt3_config *config, bool reload, const char 
 						if(!token){
 							_mosquitto_log_printf(NULL, MOSQ_LOG_ERR, "Error: Empty include_dir value in configuration.");
 						}
-#ifdef WIN32
-						snprintf(dirpath, MAX_PATH, "%s\\*.conf", token);
-						fh = FindFirstFile(dirpath, &find_data);
-						if(fh == INVALID_HANDLE_VALUE){
-							_mosquitto_log_printf(NULL, MOSQ_LOG_ERR, "Error: Unable to open include_dir '%s'.", token);
-							return 1;
-						}
-
-						do{
-							len = strlen(token)+1+strlen(find_data.cFileName)+1;
-							conf_file = _mosquitto_malloc(len+1);
-							if(!conf_file){
-								FindClose(fh);
-								return MOSQ_ERR_NOMEM;
-							}
-							snprintf(conf_file, len, "%s\\%s", token, find_data.cFileName);
-							conf_file[len] = '\0';
-								
-							rc = _config_read_file(config, reload, conf_file, cr, level+1, &lineno_ext);
-							if(rc){
-								FindClose(fh);
-								_mosquitto_log_printf(NULL, MOSQ_LOG_ERR, "Error found at %s:%d.", conf_file, lineno_ext);
-								_mosquitto_free(conf_file);
-								return rc;
-							}
-							_mosquitto_free(conf_file);
-						}while(FindNextFile(fh, &find_data));
-
-						FindClose(fh);
-#else
 						dh = opendir(token);
 						if(!dh){
 							_mosquitto_log_printf(NULL, MOSQ_LOG_ERR, "Error: Unable to open include_dir '%s'.", token);
@@ -1153,7 +1086,6 @@ int _config_read_file_core(struct mqtt3_config *config, bool reload, const char 
 							}
 						}
 						closedir(dh);
-#endif
 					}
 				}else if(!strcmp(token, "keepalive_interval")){
 #ifdef WITH_BRIDGE
@@ -1317,22 +1249,11 @@ int _config_read_file_core(struct mqtt3_config *config, bool reload, const char 
 							_mosquitto_log_printf(NULL, MOSQ_LOG_ERR, "Error: Invalid log_dest value (%s).", token);
 							return MOSQ_ERR_INVAL;
 						}
-#if defined(WIN32) || defined(__CYGWIN__)
-						if(service_handle){
-							if(cr->log_dest == MQTT3_LOG_STDOUT || cr->log_dest == MQTT3_LOG_STDERR){
-								_mosquitto_log_printf(NULL, MOSQ_LOG_ERR, "Error: Cannot log to stdout/stderr when running as a Windows service.");
-								return MOSQ_ERR_INVAL;
-							}
-						}
-#endif
 					}else{
 						_mosquitto_log_printf(NULL, MOSQ_LOG_ERR, "Error: Empty log_dest value in configuration.");
 						return MOSQ_ERR_INVAL;
 					}
 				}else if(!strcmp(token, "log_facility")){
-#if defined(WIN32) || defined(__CYGWIN__)
-					_mosquitto_log_printf(NULL, MOSQ_LOG_WARNING, "Warning: log_facility not supported on Windows.");
-#else
 					if(_conf_parse_int(&token, "log_facility", &tmp_int, saveptr)) return MOSQ_ERR_INVAL;
 					switch(tmp_int){
 						case 0:
@@ -1363,7 +1284,6 @@ int _config_read_file_core(struct mqtt3_config *config, bool reload, const char 
 							_mosquitto_log_printf(NULL, MOSQ_LOG_ERR, "Error: Invalid log_facility value (%d).", tmp_int);
 							return MOSQ_ERR_INVAL;
 					}
-#endif
 				}else if(!strcmp(token, "log_timestamp")){
 					if(_conf_parse_bool(&token, token, &config->log_timestamp, saveptr)) return MOSQ_ERR_INVAL;
 				}else if(!strcmp(token, "log_type")){

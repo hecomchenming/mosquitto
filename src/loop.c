@@ -19,21 +19,13 @@ Contributors:
 #include <config.h>
 
 #include <assert.h>
-#ifndef WIN32
 #include <poll.h>
-#else
-#include <process.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#endif
 
 #include <errno.h>
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
-#ifndef WIN32
-#  include <sys/socket.h>
-#endif
+#include <sys/socket.h>
 #include <time.h>
 
 #ifdef WITH_WEBSOCKETS
@@ -102,9 +94,7 @@ int mosquitto_main_loop(struct mosquitto_db *db, mosq_sock_t *listensock, int li
 	int time_count;
 	int fdcount;
 	struct mosquitto *context, *ctxt_tmp;
-#ifndef WIN32
 	sigset_t sigblock, origsig;
-#endif
 	int i;
 	struct pollfd *pollfds = NULL;
 	int pollfd_count = 0;
@@ -118,10 +108,8 @@ int mosquitto_main_loop(struct mosquitto_db *db, mosq_sock_t *listensock, int li
 	time_t last_timeout_check = 0;
 	char *id;
 
-#ifndef WIN32
 	sigemptyset(&sigblock);
 	sigaddset(&sigblock, SIGINT);
-#endif
 
 	if(db->config->persistent_client_expiration > 0){
 		expiration_check_time = time(NULL) + 3600;
@@ -314,13 +302,10 @@ int mosquitto_main_loop(struct mosquitto_db *db, mosq_sock_t *listensock, int li
 			last_timeout_check = mosquitto_time();
 		}
 
-#ifndef WIN32
 		sigprocmask(SIG_SETMASK, &sigblock, &origsig);
 		fdcount = poll(pollfds, pollfd_index, 100);
 		sigprocmask(SIG_SETMASK, &origsig, NULL);
-#else
-		fdcount = WSAPoll(pollfds, pollfd_index, 100);
-#endif
+
 		if(fdcount == -1){
 			loop_handle_errors(db, pollfds);
 		}else{

@@ -16,24 +16,14 @@ Contributors:
 
 #include <config.h>
 
-#ifndef WIN32
 /* For initgroups() */
 #  define _BSD_SOURCE
 #  include <unistd.h>
 #  include <grp.h>
-#endif
 
-#ifndef WIN32
 #include <pwd.h>
-#else
-#include <process.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#endif
 
-#ifndef WIN32
-#  include <sys/time.h>
-#endif
+#include <sys/time.h>
 
 #include <errno.h>
 #include <signal.h>
@@ -83,7 +73,6 @@ struct mosquitto_db *_mosquitto_get_db(void)
  */
 int drop_privileges(struct mqtt3_config *config, bool temporary)
 {
-#if !defined(__CYGWIN__) && !defined(WIN32)
 	struct passwd *pwd;
 	char err[256];
 	int rc;
@@ -125,13 +114,11 @@ int drop_privileges(struct mqtt3_config *config, bool temporary)
 			_mosquitto_log_printf(NULL, MOSQ_LOG_WARNING, "Warning: Mosquitto should not be run as root/administrator.");
 		}
 	}
-#endif
 	return MOSQ_ERR_SUCCESS;
 }
 
 int restore_privileges(void)
 {
-#if !defined(__CYGWIN__) && !defined(WIN32)
 	char err[256];
 	int rc;
 
@@ -149,7 +136,6 @@ int restore_privileges(void)
 			return 1;
 		}
 	}
-#endif
 	return MOSQ_ERR_SUCCESS;
 }
 
@@ -194,37 +180,11 @@ int main(int argc, char *argv[])
 	FILE *pid;
 	int listener_max;
 	int rc;
-#ifdef WIN32
-	SYSTEMTIME st;
-#else
 	char err[256];
 	struct timeval tv;
-#endif
 	struct mosquitto *ctxt, *ctxt_tmp;
-
-#if defined(WIN32) || defined(__CYGWIN__)
-	if(argc == 2){
-		if(!strcmp(argv[1], "run")){
-			service_run();
-			return 0;
-		}else if(!strcmp(argv[1], "install")){
-			service_install();
-			return 0;
-		}else if(!strcmp(argv[1], "uninstall")){
-			service_uninstall();
-			return 0;
-		}
-	}
-#endif
-
-
-#ifdef WIN32
-	GetSystemTime(&st);
-	srand(st.wSecond + st.wMilliseconds);
-#else
 	gettimeofday(&tv, NULL);
 	srand(tv.tv_sec + tv.tv_usec);
-#endif
 
 	memset(&int_db, 0, sizeof(struct mosquitto_db));
 
@@ -236,7 +196,6 @@ int main(int argc, char *argv[])
 	int_db.config = &config;
 
 	if(config.daemon){
-#ifndef WIN32
 		switch(fork()){
 			case 0:
 				break;
@@ -247,9 +206,6 @@ int main(int argc, char *argv[])
 			default:
 				return MOSQ_ERR_SUCCESS;
 		}
-#else
-		_mosquitto_log_printf(NULL, MOSQ_LOG_WARNING, "Warning: Can't start in daemon mode in Windows.");
-#endif
 	}
 
 	if(config.daemon && config.pid_file){
@@ -347,11 +303,9 @@ int main(int argc, char *argv[])
 #ifdef SIGHUP
 	signal(SIGHUP, handle_sighup);
 #endif
-#ifndef WIN32
 	signal(SIGUSR1, handle_sigusr1);
 	signal(SIGUSR2, handle_sigusr2);
 	signal(SIGPIPE, SIG_IGN);
-#endif
 
 #ifdef WITH_BRIDGE
 	for(i=0; i<config.bridge_count; i++){
@@ -414,11 +368,7 @@ int main(int argc, char *argv[])
 	if(listensock){
 		for(i=0; i<listensock_count; i++){
 			if(listensock[i] != INVALID_SOCKET){
-#ifndef WIN32
 				close(listensock[i]);
-#else
-				closesocket(listensock[i]);
-#endif
 			}
 		}
 		_mosquitto_free(listensock);
@@ -435,31 +385,3 @@ int main(int argc, char *argv[])
 
 	return rc;
 }
-
-#ifdef WIN32
-int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
-{
-	char **argv;
-	int argc = 1;
-	char *token;
-	char *saveptr = NULL;
-	int rc;
-
-	argv = _mosquitto_malloc(sizeof(char *)*1);
-	argv[0] = "mosquitto";
-	token = strtok_r(lpCmdLine, " ", &saveptr);
-	while(token){
-		argc++;
-		argv = _mosquitto_realloc(argv, sizeof(char *)*argc);
-		if(!argv){
-			fprintf(stderr, "Error: Out of memory.\n");
-			return MOSQ_ERR_NOMEM;
-		}
-		argv[argc-1] = token;
-		token = strtok_r(NULL, " ", &saveptr);
-	}
-	rc = main(argc, argv);
-	_mosquitto_free(argv);
-	return rc;
-}
-#endif

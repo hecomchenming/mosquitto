@@ -18,9 +18,7 @@ Contributors:
 
 #ifdef WITH_PERSISTENCE
 
-#ifndef WIN32
 #include <arpa/inet.h>
-#endif
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -34,6 +32,8 @@ Contributors:
 #include <persist.h>
 #include <time_mosq.h>
 #include "util_mosq.h"
+
+const unsigned char magic[15] = {0x00, 0xB5, 0x00, 'm','o','s','q','u','i','t','t','o',' ','d','b'};
 
 static uint32_t db_version;
 
@@ -384,13 +384,6 @@ int mqtt3_db_backup(struct mosquitto_db *db, bool shutdown)
 
 	fclose(db_fptr);
 
-#ifdef WIN32
-	if(remove(db->config->persistence_filepath) != 0){
-		if(errno != ENOENT){
-			goto error;
-		}
-	}
-#endif
 	if(rename(outfile, db->config->persistence_filepath) != 0){
 		goto error;
 	}

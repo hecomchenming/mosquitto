@@ -16,14 +16,13 @@ Contributors:
 
 #include <config.h>
 
-#ifndef WIN32
 #include <unistd.h>
-#endif
-
 #include <mosquitto_internal.h>
 #include <net_mosq.h>
 
 void *_mosquitto_thread_main(void *obj);
+
+#ifndef WITH_BROKER
 
 int mosquitto_loop_start(struct mosquitto *mosq)
 {
@@ -51,12 +50,8 @@ int mosquitto_loop_stop(struct mosquitto *mosq, bool force)
 	/* Write a single byte to sockpairW (connected to sockpairR) to break out
 	 * of select() if in threaded mode. */
 	if(mosq->sockpairW != INVALID_SOCKET){
-#ifndef WIN32
 		if(write(mosq->sockpairW, &sockpair_data, 1)){
 		}
-#else
-		send(mosq->sockpairW, &sockpair_data, 1, 0);
-#endif
 	}
 	
 	if(force){
@@ -107,3 +102,4 @@ int mosquitto_threaded_set(struct mosquitto *mosq, bool threaded)
 
 	return MOSQ_ERR_SUCCESS;
 }
+#endif

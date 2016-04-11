@@ -19,10 +19,6 @@ Contributors:
 
 #include <config.h>
 
-#ifdef WIN32
-#  include <winsock2.h>
-#endif
-
 #ifdef WITH_TLS
 #  include <openssl/ssl.h>
 #else
@@ -40,18 +36,7 @@ Contributors:
 #  include <ares.h>
 #endif
 
-#ifdef WIN32
-#	if _MSC_VER < 1600
-		typedef unsigned char uint8_t;
-		typedef unsigned short uint16_t;
-		typedef unsigned int uint32_t;
-		typedef unsigned long long uint64_t;
-#	else
-#		include <stdint.h>
-#	endif
-#else
-#	include <stdint.h>
-#endif
+#include <stdint.h>
 
 #include "mosquitto.h"
 #include "time_mosq.h"
@@ -60,11 +45,7 @@ Contributors:
 struct mosquitto_client_msg;
 #endif
 
-#ifdef WIN32
-typedef SOCKET mosq_sock_t;
-#else
 typedef int mosq_sock_t;
-#endif
 
 enum mosquitto_msg_direction {
 	mosq_md_in = 0,
