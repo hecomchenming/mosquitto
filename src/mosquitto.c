@@ -17,9 +17,10 @@ Contributors:
 #include <config.h>
 
 /* For initgroups() */
-#  define _BSD_SOURCE
-#  include <unistd.h>
-#  include <grp.h>
+#define _BSD_SOURCE
+#include <unistd.h>
+#include <grp.h>
+#include <assert.h>
 
 #include <pwd.h>
 
