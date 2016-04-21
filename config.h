@@ -28,6 +28,9 @@
 # define TIMESTAMP "20160408"
 #endif
 
+#define MAX_CONNECT 1024000
+#define MAX_EVENT 65536
+
 
 //#ifndef WITH_BROKER
 //#  define WITH_BROKER

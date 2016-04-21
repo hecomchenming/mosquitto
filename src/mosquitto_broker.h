@@ -69,7 +69,6 @@ enum mosquitto_protocol {
 typedef uint64_t dbid_t;
 
 struct _mqtt3_listener {
-	int fd;
 	char *host;
 	uint16_t port;
 	int max_connections;
@@ -240,6 +239,7 @@ struct _mosquitto_auth_plugin{
 
 struct mosquitto_db{
 	dbid_t last_db_id;
+    int efd;
 	struct _mosquitto_subhier subs;
 	struct _mosquitto_unpwd *unpwd;
 	struct _mosquitto_acl_user *acl_list;

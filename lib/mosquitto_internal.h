@@ -186,7 +186,6 @@ struct mosquitto {
 	struct _mosquitto_packet *out_packet_last;
 	struct _mosquitto_subhier **subs;
 	int sub_count;
-	int pollfd_index;
 #  ifdef WITH_WEBSOCKETS
 #    if defined(LWS_LIBRARY_VERSION_NUMBER)
 	struct lws *wsi;
