@@ -22,6 +22,7 @@ Contributors:
 #include <mosquitto_broker.h>
 #include <memory_mosq.h>
 #include <time_mosq.h>
+#include <sys/epoll.h>
 
 #include "uthash.h"
 
@@ -79,6 +80,10 @@ struct mosquitto *mqtt3_context_init(struct mosquitto_db *db, mosq_sock_t sock)
 
 	if((int)context->sock >= 0){
 		HASH_ADD(hh_sock, db->contexts_by_sock, sock, sizeof(context->sock), context);
+struct epoll_event ev;
+        ev.data.fd = context->sock;
+        ev.events = EPOLLIN;
+        epoll_ctl(db->efd, EPOLL_CTL_ADD, context->sock, &ev);
 	}
 	return context;
 }

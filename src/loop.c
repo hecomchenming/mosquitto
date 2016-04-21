@@ -38,7 +38,7 @@ Contributors:
 #include <time_mosq.h>
 #include <util_mosq.h>
 #include <stdlib.h>
-#include "epoll.h"
+#include <sys/epoll.h>
 
 extern bool flag_reload;
 #ifdef WITH_PERSISTENCE
@@ -91,6 +91,7 @@ static void _add_event(int epollfd, int fd, int state)
     ev.events = state;
     ev.data.fd = fd;
     epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &ev);
+	_mosquitto_log_printf(NULL, MOSQ_LOG_DEBUG, "add sock %d", fd);
 }
 
 static void _modify_event(int epollfd, int fd, int state)
@@ -99,6 +100,7 @@ static void _modify_event(int epollfd, int fd, int state)
     ev.events = state;
     ev.data.fd = fd;
     epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &ev);
+	_mosquitto_log_printf(NULL, MOSQ_LOG_DEBUG, "mod sock %d", fd);
 }
 
 static void _delete_event(int epollfd, int fd, int state) {
@@ -106,6 +108,7 @@ static void _delete_event(int epollfd, int fd, int state) {
     ev.events = state;
     ev.data.fd = fd;
     epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, &ev);
+	_mosquitto_log_printf(NULL, MOSQ_LOG_DEBUG, "del sock %d", fd);
 }
 
 /* 从大到小 */
@@ -129,6 +132,7 @@ static int _bi_find_sock(mosq_sock_t *socks, int sock_count, mosq_sock_t target)
             high = mid - 1;
         }
     }
+	_mosquitto_log_printf(NULL, MOSQ_LOG_DEBUG, "sock %d not found", target);
     return 0;
 }
 
@@ -167,6 +171,7 @@ int mosquitto_main_loop(struct mosquitto_db *db, mosq_sock_t *listensock, int li
 	sigaddset(&sigblock, SIGINT);
     
     qsort(listensock, listensock_count, sizeof(mosq_sock_t), _compare_socks);
+	_mosquitto_log_printf(NULL, MOSQ_LOG_INFO, "sock0: %d, sockn-1: %d", listensock[0], listensock[listensock_count - 1]);
 
 	if(db->config->persistent_client_expiration > 0){
 		expiration_check_time = time(NULL) + 3600;
@@ -355,6 +360,7 @@ int mosquitto_main_loop(struct mosquitto_db *db, mosq_sock_t *listensock, int li
 		if(event_count == -1){
 			_mosquitto_log_printf(NULL, MOSQ_LOG_ERR, "Error in poll: %s.", strerror(errno));
 		}else{
+		_mosquitto_log_printf(NULL, MOSQ_LOG_INFO, "to handle_events: %d", event_count);
             handle_events(db, events, event_count);
 		}
 #ifdef WITH_PERSISTENCE
@@ -482,7 +488,6 @@ static void handle_events(struct mosquitto_db *db, struct epoll_event *epoll_eve
             if (epoll_events[i].events & (POLLIN|POLLPRI) && _bi_find_sock(_listen_socks, _listen_count, fd)) {
                 while(new_sock = mqtt3_socket_accept(db, fd), new_sock != -1){
                 }
-                _add_event(db->efd, new_sock, EPOLLIN);
             }
             continue;
         }
