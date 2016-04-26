@@ -115,7 +115,7 @@ static void _delete_event(int epollfd, int fd, int state) {
 static int _compare_socks(const void *s1, const void *s2) {
     mosq_sock_t *sock1 = (mosq_sock_t *)s1;
     mosq_sock_t *sock2 = (mosq_sock_t *)s2;
-    return (*sock1) - (*sock2);
+    return (*sock2) - (*sock1);
 }
 
 /* 二分查找 */
