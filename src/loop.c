@@ -361,7 +361,7 @@ int mosquitto_main_loop(struct mosquitto_db *db, mosq_sock_t *listensock, int li
 			_mosquitto_log_printf(NULL, MOSQ_LOG_ERR, "Error in poll: %s.", strerror(errno));
 		}else{
 		_mosquitto_log_printf(NULL, MOSQ_LOG_INFO, "to handle_events: %d", event_count);
-            handle_events(db, events, event_count);
+            	handle_events(db, events, event_count);
 		}
 #ifdef WITH_PERSISTENCE
 		if(db->config->persistence && db->config->autosave_interval){
@@ -425,6 +425,8 @@ void do_disconnect(struct mosquitto_db *db, struct mosquitto *context)
 {
 	char *id;
 
+	_mosquitto_log_printf(NULL, MOSQ_LOG_NOTICE, "to disconnect: %d.", context->sock);
+
 	if(context->state == mosq_cs_disconnected){
 		return;
 	}
@@ -482,13 +484,16 @@ static void handle_events(struct mosquitto_db *db, struct epoll_event *epoll_eve
     
     for (i = 0; i < events_count; ++i) {
         fd = epoll_events[i].data.fd;
-        
         HASH_FIND(hh_sock, db->contexts_by_sock, &(epoll_events[i].data.fd), sizeof(int), context);
         if (context == NULL) {
             if (epoll_events[i].events & (POLLIN|POLLPRI) && _bi_find_sock(_listen_socks, _listen_count, fd)) {
                 while(new_sock = mqtt3_socket_accept(db, fd), new_sock != -1){
                 }
             }
+	    else {
+		_mosquitto_log_printf(NULL, MOSQ_LOG_INFO, "to handle_fd: %d not found", fd);
+		_delete_event(db->efd, fd, EPOLLIN);
+	    }
             continue;
         }
         
@@ -500,13 +505,15 @@ static void handle_events(struct mosquitto_db *db, struct epoll_event *epoll_eve
         assert(context->sock == epoll_events[i].data.fd);
         
 #ifdef WITH_TLS
-        if(epoll_events[i].events & POLLOUT ||
+        if(epoll_events[i].events & EPOLLOUT ||
            context->want_write ||
            (context->ssl && context->state == mosq_cs_new)){
 #else
-        if(epoll_events[i].events & POLLOUT){
+        if(epoll_events[i].events & EPOLLOUT){
 #endif
+	    _mosquitto_log_printf(NULL, MOSQ_LOG_DEBUG, "to handle write event: %d", fd);
             if(context->state == mosq_cs_connect_pending){
+		_mosquitto_log_printf(NULL, MOSQ_LOG_DEBUG, "to mosq_cs_connect_pending: %d", fd);
                 len = sizeof(int);
                 if(!getsockopt(context->sock, SOL_SOCKET, SO_ERROR, (char *)&err, &len)){
                     if(err == 0){
@@ -528,6 +535,7 @@ static void handle_events(struct mosquitto_db *db, struct epoll_event *epoll_eve
 #else
         if (epoll_events[i].events & EPOLLIN) {
 #endif
+	    _mosquitto_log_printf(NULL, MOSQ_LOG_DEBUG, "to handle read event: %d", fd);
             do{
                 if(_mosquitto_packet_read(db, context)){
                     do_disconnect(db, context);
