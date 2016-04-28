@@ -485,7 +485,7 @@ static void handle_events(struct mosquitto_db *db, struct epoll_event *epoll_eve
         
         HASH_FIND(hh_sock, db->contexts_by_sock, &(epoll_events[i].data.fd), sizeof(int), context);
         if (context == NULL) {
-            if (epoll_events[i].events & (POLLIN|POLLPRI) && _bi_find_sock(_listen_socks, _listen_count, fd)) {
+            if (epoll_events[i].events & (EPOLLIN|EPOLLPRI) && _bi_find_sock(_listen_socks, _listen_count, fd)) {
                 while(new_sock = mqtt3_socket_accept(db, fd), new_sock != -1){
                 }
             }
@@ -500,11 +500,11 @@ static void handle_events(struct mosquitto_db *db, struct epoll_event *epoll_eve
         assert(context->sock == epoll_events[i].data.fd);
         
 #ifdef WITH_TLS
-        if(epoll_events[i].events & POLLOUT ||
+        if(epoll_events[i].events & EPOLLOUT ||
            context->want_write ||
            (context->ssl && context->state == mosq_cs_new)){
 #else
-        if(epoll_events[i].events & POLLOUT){
+        if(epoll_events[i].events & EPOLLOUT){
 #endif
             if(context->state == mosq_cs_connect_pending){
                 len = sizeof(int);
