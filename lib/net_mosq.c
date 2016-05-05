@@ -740,6 +740,10 @@ int _mosquitto_packet_write(struct mosquitto *mosq)
 		pthread_mutex_unlock(&mosq->current_out_packet_mutex);
 		return MOSQ_ERR_SUCCESS;
 	}
+	if (!mosq->current_out_packet) {
+	        _mosquitto_log_printf(NULL, MOSQ_LOG_DEBUG, "to handle write event: %d, write empty packet", mosq->sock);
+		return MOSQ_ERR_INVAL;
+}
 
 	while(mosq->current_out_packet){
 		packet = mosq->current_out_packet;
