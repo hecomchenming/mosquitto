@@ -472,7 +472,9 @@ int mqtt3_handle_connect(struct mosquitto_db *db, struct mosquitto *context)
 
 		found_context->clean_session = true;
 		found_context->state = mosq_cs_disconnecting;
-		do_disconnect(db, found_context);
+		if(found_context->sock != INVALID_SOCKET){
+			do_disconnect(db, found_context);
+		}
 	}
 
 	/* Associate user with its ACL, assuming we have ACLs loaded. */
