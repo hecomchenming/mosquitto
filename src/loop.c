@@ -19,7 +19,6 @@ Contributors:
 #include <config.h>
 
 #include <assert.h>
-#include <poll.h>
 
 #include <errno.h>
 #include <signal.h>
@@ -236,7 +235,7 @@ int mosquitto_main_loop(struct mosquitto_db *db, mosq_sock_t *listensock, int li
 				/* Local bridges never time out in this fashion. */
 				if(!(context->keepalive)
 						|| context->bridge
-						|| now - context->last_msg_in < (time_t)(context->keepalive)*3/2){
+						|| now - context->last_msg_in < (time_t)(context->keepalive) * 7 / 2){
 
 					if(mqtt3_db_message_write(db, context) == MOSQ_ERR_SUCCESS){
 						if(context->current_out_packet || context->state == mosq_cs_connect_pending){
@@ -252,7 +251,7 @@ int mosquitto_main_loop(struct mosquitto_db *db, mosq_sock_t *listensock, int li
 						}else{
 							id = "<unknown>";
 						}
-						_mosquitto_log_printf(NULL, MOSQ_LOG_NOTICE, "Client %s has exceeded timeout, disconnecting.", id);
+						_mosquitto_log_printf(NULL, MOSQ_LOG_NOTICE, "Client %s has exceeded timeout:%d, last msg: %d, disconnecting.", id, context->keepalive * 7 / 2, context->last_msg_in);
 					}
 					/* Client has exceeded keepalive*1.5 */
 					do_disconnect(db, context);
