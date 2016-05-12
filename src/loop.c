@@ -430,7 +430,9 @@ void do_disconnect(struct mosquitto_db *db, struct mosquitto *context)
 		return;
 	}
     
+if (context->sock != INVALID_SOCKET) {
     _delete_event(db->efd, context->sock, EPOLLIN);
+}
     
 #ifdef WITH_WEBSOCKETS
 	if(context->wsi){
