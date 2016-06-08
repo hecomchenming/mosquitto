@@ -22,7 +22,6 @@ Contributors:
 #include <mosquitto.h>
 #include <memory_mosq.h>
 
-#ifndef WITH_BROKER
 int _mosquitto_log_printf(struct mosquitto *mosq, int priority, const char *fmt, ...)
 {
 	va_list va;
@@ -54,6 +53,4 @@ int _mosquitto_log_printf(struct mosquitto *mosq, int priority, const char *fmt,
 
 	return MOSQ_ERR_SUCCESS;
 }
-#endif
-
 
