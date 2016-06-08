@@ -359,7 +359,7 @@ int mosquitto_main_loop(struct mosquitto_db *db, mosq_sock_t *listensock, int li
 		if(event_count == -1){
 			_mosquitto_log_printf(NULL, MOSQ_LOG_ERR, "Error in poll: %s.", strerror(errno));
 		}else{
-		_mosquitto_log_printf(NULL, MOSQ_LOG_INFO, "to handle_events: %d", event_count);
+		_mosquitto_log_printf(NULL, MOSQ_LOG_DEBUG, "to handle_events: %d", event_count);
             	handle_events(db, events, event_count);
 		}
 #ifdef WITH_PERSISTENCE
@@ -492,7 +492,7 @@ static void handle_events(struct mosquitto_db *db, struct epoll_event *epoll_eve
                 }
             }
 	    else {
-		_mosquitto_log_printf(NULL, MOSQ_LOG_INFO, "to handle_fd: %d not found", fd);
+		_mosquitto_log_printf(NULL, MOSQ_LOG_DEBUG, "to handle_fd: %d not found", fd);
 		_delete_event(db->efd, fd, EPOLLIN);
 	    }
             continue;

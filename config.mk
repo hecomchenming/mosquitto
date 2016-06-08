@@ -241,7 +241,7 @@ ifeq ($(WITH_DOCS),yes)
 endif
 
 INSTALL?=install
-prefix=//Users/chenming/local
+prefix=/usr/local
 mandir=${prefix}/share/man
 localedir=${prefix}/share/locale
 STRIP?=strip
