@@ -19,17 +19,45 @@ Contributors:
 #include <mach/mach_time.h>
 #endif
 
-#include <unistd.h>
+#ifdef WIN32
+#  define _WIN32_WINNT _WIN32_WINNT_VISTA
+#  include <windows.h>
+#else
+#  include <unistd.h>
+#endif
 #include <time.h>
 
 #include "mosquitto.h"
 #include "time_mosq.h"
 
+#ifdef WIN32
+static bool tick64 = false;
+
+void _windows_time_version_check(void)
+{
+	OSVERSIONINFO vi;
+
+	tick64 = false;
+
+	memset(&vi, 0, sizeof(OSVERSIONINFO));
+	vi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+	if(GetVersionEx(&vi)){
+		if(vi.dwMajorVersion > 5){
+			tick64 = true;
+		}
+	}
+}
+#endif
 
 time_t mosquitto_time(void)
 {
-
-#if _POSIX_TIMERS>0 && defined(_POSIX_MONOTONIC_CLOCK)
+#ifdef WIN32
+	if(tick64){
+		return GetTickCount64()/1000;
+	}else{
+		return GetTickCount()/1000; /* FIXME - need to deal with overflow. */
+	}
+#elif _POSIX_TIMERS>0 && defined(_POSIX_MONOTONIC_CLOCK)
 	struct timespec tp;
 
 	clock_gettime(CLOCK_MONOTONIC, &tp);

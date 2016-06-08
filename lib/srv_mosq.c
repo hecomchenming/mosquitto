@@ -27,7 +27,6 @@ Contributors:
 #include "mosquitto_internal.h"
 #include "mosquitto.h"
 
-#ifndef WITH_BROKER
 #ifdef WITH_SRV
 static void srv_callback(void *arg, int status, int timeouts, unsigned char *abuf, int alen)
 {   
@@ -97,5 +96,5 @@ int mosquitto_connect_srv(struct mosquitto *mosq, const char *host, int keepaliv
 	return MOSQ_ERR_NOT_SUPPORTED;
 #endif
 }
-#endif
+
 
