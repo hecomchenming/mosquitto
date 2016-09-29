@@ -303,7 +303,7 @@ void handle_sigint1(int signal)
 	exit(0);
 }
 
-int main2(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	char *password_file_tmp = NULL;
 	char password_file[1024];
